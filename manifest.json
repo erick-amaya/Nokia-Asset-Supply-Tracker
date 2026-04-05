@@ -1,0 +1,15 @@
+{
+  "name": "Gestión de Materiales · Ingetel Nokia",
+  "short_name": "Materiales",
+  "description": "Sistema de gestión de inventario y materiales para proyectos Nokia 2026",
+  "start_url": "/Nokia-Asset-Supply-Tracker/",
+  "scope": "/Nokia-Asset-Supply-Tracker/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    { "src": "icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
