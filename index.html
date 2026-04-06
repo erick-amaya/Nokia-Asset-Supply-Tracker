@@ -32,7 +32,7 @@ body{font-family:'Barlow',sans-serif;background:#f0f2f0;color:var(--k);font-size
 .bs{color:var(--gl);font-size:9px;letter-spacing:.5px;display:block}
 .htit{color:var(--gl);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.85}
 /* NAV */
-.nav{background:#111;display:flex;gap:1px;padding:0 18px;border-bottom:1px solid rgba(255,255,255,.06);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.nav{background:#111;display:flex;gap:1px;padding:0 18px;border-bottom:1px solid rgba(255,255,255,.06);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:sticky;top:50px;z-index:190}
 .nav::-webkit-scrollbar{display:none}
 .nt{background:none;border:none;color:var(--g3);font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
 .nt:hover{color:#fff}.nt.active{color:var(--gl);border-bottom-color:var(--gl)}
@@ -296,6 +296,23 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
 <!-- ============================================================ -->
 <section id="screen-dashboard" class="screen active">
 
+  <!-- FILTROS DASHBOARD -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-b" style="padding:10px 16px">
+      <div class="fbar" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--g4);white-space:nowrap">Filtrar por:</span>
+        <select class="fc" id="dash-filtro-sitio" onchange="renderDashboard()" style="max-width:200px">
+          <option value="">Todos los sitios</option>
+        </select>
+        <select class="fc" id="dash-filtro-material" onchange="renderDashboard()" style="max-width:220px">
+          <option value="">Todos los materiales</option>
+        </select>
+        <button class="fbar-btn" onclick="clearDashFilters()">✕ Limpiar</button>
+        <span id="dash-filtro-badge" style="display:none;background:var(--k);color:var(--gl);font-size:9px;font-weight:700;padding:3px 10px;border-radius:12px"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- KPIs fila 1 -->
   <div class="kpi-grid">
     <div class="kpi k-valor">
@@ -381,6 +398,24 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
     <div class="card-h"><h2>Top 10 Materiales más Consumidos (Salidas acumuladas)</h2></div>
     <div class="card-b">
       <div class="chart-wrap" style="height:240px"><canvas id="chartConsumo"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Gráfica fila 4: Valor despachado por sitio -->
+  <div class="card">
+    <div class="card-h">
+      <h2 id="chartSitios-title">Valor Despachado por Sitio</h2>
+    </div>
+    <div class="card-b">
+      <div class="chart-wrap" style="height:360px"><canvas id="chartSitios"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Gráfica fila 5: Top materiales más costosos -->
+  <div class="card">
+    <div class="card-h"><h2>Top 15 Materiales más Costosos (Precio Unitario en Catálogo)</h2></div>
+    <div class="card-b">
+      <div class="chart-wrap" style="height:320px"><canvas id="chartPrecioUnit"></canvas></div>
     </div>
   </div>
 
@@ -1808,13 +1843,48 @@ function setFilter(key, val, btn) {
 // ============================================================
 // DASHBOARD
 // ============================================================
+function clearDashFilters() {
+  const s = document.getElementById('dash-filtro-sitio');
+  const m = document.getElementById('dash-filtro-material');
+  if (s) s.value = '';
+  if (m) m.value = '';
+  renderDashboard();
+}
+
 function renderDashboard() {
   if (!invViewData.length) return;
+
+  // ── Leer filtros ──────────────────────────────────────────────
+  const fSitioId  = parseInt(document.getElementById('dash-filtro-sitio')?.value)  || null;
+  const fCatId    = parseInt(document.getElementById('dash-filtro-material')?.value) || null;
+  const fSitio    = fSitioId  ? sitiosData.find(s => s.id === fSitioId)   : null;
+  const fMat      = fCatId    ? catalogoData.find(c => c.id === fCatId)   : null;
+  const hasFilter = fSitioId || fCatId;
+
+  // Badge de filtro activo
+  const badge = document.getElementById('dash-filtro-badge');
+  if (badge) {
+    const parts = [];
+    if (fSitio) parts.push('Sitio: ' + fSitio.nombre);
+    if (fMat)   parts.push('Material: ' + fMat.nombre);
+    badge.textContent = parts.join(' · ');
+    badge.style.display = parts.length ? '' : 'none';
+  }
+
+  // ── movData filtrado ──────────────────────────────────────────
+  let movFilt = movData;
+  if (fSitioId) movFilt = movFilt.filter(m => m.sitio_id === fSitioId);
+  if (fCatId)   movFilt = movFilt.filter(m => m.catalogo_id === fCatId);
+  const movFiltSal = movFilt.filter(m => m.tipo === 'Salida');
+  const movFiltEnt = movFilt.filter(m => m.tipo === 'Entrada');
+
+  // ── invViewData filtrado (solo para KPIs de stock) ────────────
+  const invFilt = fCatId ? invViewData.filter(r => r.cat_id === fCatId) : invViewData;
 
   // --- KPIs fila 1 ---
   let enStock = 0, bajo = 0, agotado = 0, valorTotal = 0, tiVal = 0, cwVal = 0;
   const seen = new Set();
-  for (const r of invViewData) {
+  for (const r of invFilt) {
     const key = r.cat_id + '-' + r.bodega_id;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -1826,8 +1896,8 @@ function renderDashboard() {
     else agotado++;
   }
 
-  const totalEnt = movData.filter(m => m.tipo === 'Entrada').reduce((a,m) => a + Number(m.valor_total||0), 0);
-  const totalSal = movData.filter(m => m.tipo === 'Salida').reduce((a,m) => a + Number(m.valor_total||0), 0);
+  const totalEnt = movFiltEnt.reduce((a,m) => a + Number(m.valor_total||0), 0);
+  const totalSal = movFiltSal.reduce((a,m) => a + Number(m.valor_total||0), 0);
 
   document.getElementById('kpi-valor').textContent = formatCOP(valorTotal);
   document.getElementById('kpi-stock').textContent = enStock;
@@ -1853,7 +1923,7 @@ function renderDashboard() {
   );
 
   // --- Gráfica 3: Top 10 materiales por importe (bar horizontal) ---
-  const top10Importe = [...invViewData]
+  const top10Importe = [...invFilt]
     .filter(r => r.importe > 0)
     .sort((a,b) => b.importe - a.importe)
     .slice(0, 10);
@@ -1887,7 +1957,7 @@ function renderDashboard() {
 
   // --- Gráfica 4: Entradas vs Salidas por mes ---
   const mesesMap = {};
-  for (const m of movData) {
+  for (const m of movFilt) {
     if (!m.fecha) continue;
     const ym = m.fecha.slice(0, 7); // YYYY-MM
     if (!mesesMap[ym]) mesesMap[ym] = { ent: 0, sal: 0 };
@@ -1926,7 +1996,7 @@ function renderDashboard() {
 
   // --- Gráfica 5: Top 10 materiales más consumidos (por cantidad de salidas) ---
   const consumoMap = {};
-  for (const m of movData.filter(x => x.tipo === 'Salida')) {
+  for (const m of movFiltSal) {
     const key = m.catalogo_id;
     const nombre = m.mat_catalogo?.codigo || key;
     if (!consumoMap[key]) consumoMap[key] = { nombre, cant: 0, valor: 0 };
@@ -1962,8 +2032,99 @@ function renderDashboard() {
     }
   });
 
+  // --- Gráfica 6: Valor despachado por sitio ---
+  const sitioMap = {};
+  for (const m of movFiltSal) {
+    if (!m.sitio_id) continue;
+    if (!sitioMap[m.sitio_id]) {
+      const s = sitiosData.find(x => x.id === m.sitio_id);
+      sitioMap[m.sitio_id] = { nombre: s?.nombre || `Sitio ${m.sitio_id}`, valor: 0, tipo: s?.tipo_cw || '' };
+    }
+    sitioMap[m.sitio_id].valor += Number(m.valor_total || 0);
+  }
+  const sitiosChart = Object.values(sitioMap).filter(s => s.valor > 0).sort((a,b) => b.valor - a.valor).slice(0, 20);
+  const titleSitios = document.getElementById('chartSitios-title');
+  if (titleSitios) titleSitios.textContent = fMat
+    ? `Sitios que más usan: ${fMat.nombre}`
+    : fSitio ? `Consumo por material — ${fSitio.nombre}` : 'Valor Despachado por Sitio (Top 20)';
+
+  destroyChart('chartSitios');
+  if (sitiosChart.length) {
+    window['chartSitios_inst'] = new Chart(
+      document.getElementById('chartSitios').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: sitiosChart.map(s => s.nombre),
+        datasets: [{
+          label: 'Valor despachado ($)',
+          data: sitiosChart.map(s => s.valor),
+          backgroundColor: sitiosChart.map((s, i) => {
+            if (fSitioId && s.nombre === fSitio?.nombre) return '#d68910';
+            return i % 2 === 0 ? '#144E4Acc' : '#1a9c1acc';
+          }),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ' ' + formatCOP(c.raw) } }
+        },
+        scales: {
+          x: { ticks: { callback: v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K'), font: { size: 10 } }, grid: { color: '#f0f0f0' } },
+          y: { ticks: { font: { size: 10, family: 'Barlow' } } }
+        }
+      }
+    });
+  } else {
+    document.getElementById('chartSitios').getContext('2d').clearRect(0,0,9999,9999);
+  }
+
+  // --- Gráfica 7: Top 15 materiales más costosos (precio unitario catálogo) ---
+  const precioData = [...catalogoData]
+    .filter(c => c.activo !== false && Number(c.costo_unitario) > 0)
+    .sort((a,b) => Number(b.costo_unitario) - Number(a.costo_unitario))
+    .slice(0, 15);
+
+  destroyChart('chartPrecioUnit');
+  window['chartPrecioUnit_inst'] = new Chart(
+    document.getElementById('chartPrecioUnit').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: precioData.map(c => c.codigo),
+      datasets: [{
+        label: 'Precio unitario ($)',
+        data: precioData.map(c => Number(c.costo_unitario)),
+        backgroundColor: precioData.map(c => {
+          if (fCatId && c.id === fCatId) return '#d68910';
+          return c.categoria === 'TI' ? '#144E4Acc' : '#7c3aedcc';
+        }),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => precioData[items[0].dataIndex]?.nombre || '',
+            label: c => ' ' + formatCOP(c.raw) + ' / ' + (precioData[c.dataIndex]?.unidad || 'und')
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { callback: v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K'), font: { size: 10 } }, grid: { color: '#f0f0f0' } },
+        y: { ticks: { font: { size: 10, family: 'Barlow' } } }
+      }
+    }
+  });
+
   // --- Alertas ---
-  const alertas = invViewData.filter(r => r.status !== 'Stock')
+  const alertas = invFilt.filter(r => r.status !== 'Stock')
     .sort((a,b) => a.status === 'Agotado' ? -1 : b.status === 'Agotado' ? 1 : 0)
     .slice(0, 20);
 
@@ -1978,7 +2139,7 @@ function renderDashboard() {
     </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--g3)">Sin alertas ✓</td></tr>';
 
   // --- Últimos movimientos ---
-  document.getElementById('tbl-ultimos').innerHTML = movData.slice(0, 10).map(m => `
+  document.getElementById('tbl-ultimos').innerHTML = (hasFilter ? movFilt : movData).slice(0, 10).map(m => `
     <tr>
       <td>${fmtDate(m.fecha)}</td>
       <td><span class="badge bg-k">${m.numero_doc}</span></td>
@@ -2421,7 +2582,7 @@ function renderBodegas() {
             <span>${b.nombre}</span>
             <span style="color:var(--g3);font-weight:400">– ${b.regional || 'Sin regional'}</span>
             ${b.ciudad ? `<span style="color:var(--g4);font-weight:400;font-size:10px">· ${b.ciudad}</span>` : ''}
-            ${b.direccion ? `<span style="color:var(--g3);font-weight:400;font-size:10px">· ${b.direccion}</span>` : ''}
+            ${b.direccion ? `<span style="margin-left:auto;color:var(--g3);font-weight:400;font-size:10px">📍 ${b.direccion}</span>` : ''}
           </div>
         </div>
         <div style="display:flex;gap:6px">
@@ -2544,6 +2705,22 @@ function populateSelects() {
     const curr = sitRegSel.value;
     sitRegSel.innerHTML = '<option value="">Todas las regionales</option>' + regs.map(r => `<option value="${r}">${r}</option>`).join('');
     if (curr) sitRegSel.value = curr;
+  }
+
+  // Dashboard filter selects
+  const dashSitio = document.getElementById('dash-filtro-sitio');
+  if (dashSitio) {
+    const curr = dashSitio.value;
+    dashSitio.innerHTML = '<option value="">Todos los sitios</option>' +
+      sitiosData.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+    if (curr) dashSitio.value = curr;
+  }
+  const dashMat = document.getElementById('dash-filtro-material');
+  if (dashMat) {
+    const curr = dashMat.value;
+    dashMat.innerHTML = '<option value="">Todos los materiales</option>' +
+      catalogoData.map(c => `<option value="${c.id}">[${c.categoria}] ${c.nombre}</option>`).join('');
+    if (curr) dashMat.value = curr;
   }
 
   // Import modal default bodega
