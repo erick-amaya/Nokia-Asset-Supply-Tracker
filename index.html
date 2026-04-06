@@ -230,21 +230,7 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
       <span style="font-size:11px;color:var(--g3);letter-spacing:1px;font-weight:600;text-transform:uppercase">Gestión de Materiales · Nokia 2026</span>
     </div>
 
-    <!-- Panel de conexión (visible solo si no hay config guardada) -->
-    <div id="login-conn-panel" style="display:none;background:#f0fdf4;border:1.5px solid var(--g2);border-radius:8px;padding:14px;margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--go);margin-bottom:10px">Configurar conexión a Supabase</div>
-      <div class="fg">
-        <label class="fl">Supabase URL</label>
-        <input type="text" class="fc" id="login-sb-url" placeholder="https://xxxx.supabase.co" style="font-size:11px">
-      </div>
-      <div class="fg">
-        <label class="fl">Anon Key</label>
-        <input type="text" class="fc" id="login-sb-key" placeholder="eyJhbGci..." style="font-size:11px">
-      </div>
-      <button class="btn bp btn-sm" style="width:100%;justify-content:center" onclick="saveConnFromLogin()">Guardar y Conectar</button>
-    </div>
-
-    <!-- Formulario de login (oculto hasta tener conexión) -->
+    <!-- Formulario de login -->
     <div id="login-form-panel">
       <div class="fg">
         <label class="fl">Correo electrónico</label>
@@ -1372,12 +1358,17 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
 // ============================================================
 // CONFIG & SUPABASE
 // ============================================================
-let SB_URL = localStorage.getItem('mat_sb_url') || '';
-let SB_KEY = localStorage.getItem('mat_sb_key') || '';
+// ============================================================
+// ⚙ CREDENCIALES SUPABASE — cambiar aquí para cada empresa
+// ============================================================
+const SB_URL = 'https://lpumbcbhufkadonzijjt.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwdW1iY2JodWZrYWRvbnppamp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MDg3MTEsImV4cCI6MjA5MDk4NDcxMX0.aSRhpJjyj_mH2fAPLBB37pEUkNNGVNS9cW9RWVjGIdI';
+// ============================================================
+
 let sb = null;
 
 function initSupabase() {
-  if (!SB_URL || !SB_KEY) return false;
+  if (!SB_URL || !SB_KEY || SB_URL.includes('TU-PROYECTO')) return false;
   try {
     sb = supabase.createClient(SB_URL, SB_KEY);
     return true;
@@ -1434,19 +1425,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       await afterLogin(session.user);
     }
   } else {
-    // Sin config: mostrar el panel de conexión dentro del login overlay
     document.getElementById('login-overlay').style.display = 'flex';
-    document.getElementById('login-conn-panel').style.display = 'block';
-    document.getElementById('login-form-panel').style.display = 'none';
-    document.getElementById('cfg-conn-status').textContent = 'Sin conexión configurada';
+    document.getElementById('cfg-conn-status').textContent = 'Sin conexión — verifica las credenciales en el código';
   }
 });
 
 function showLoginOverlay() {
   currentRole = 'viewer'; currentUser = ''; currentNombre = '';
   document.getElementById('login-overlay').style.display = 'flex';
-  document.getElementById('login-conn-panel').style.display = 'none';
-  document.getElementById('login-form-panel').style.display = 'block';
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-err').style.display = 'none';
@@ -1519,26 +1505,6 @@ async function doLogout() {
   showLoginOverlay();
 }
 
-async function saveConnFromLogin() {
-  const url = document.getElementById('login-sb-url').value.trim();
-  const key = document.getElementById('login-sb-key').value.trim();
-  if (!url || !key) { toast('Ingresa URL y Anon Key de Supabase', true); return; }
-  SB_URL = url; SB_KEY = key;
-  localStorage.setItem('mat_sb_url', SB_URL);
-  localStorage.setItem('mat_sb_key', SB_KEY);
-  // Sync with config screen fields
-  const cfgUrl = document.getElementById('cfg-url');
-  const cfgKey = document.getElementById('cfg-key');
-  if (cfgUrl) cfgUrl.value = SB_URL;
-  if (cfgKey) cfgKey.value = SB_KEY;
-  if (!initSupabase()) { toast('URL o Key inválidos', true); return; }
-  await loadEmpresaConfig();
-  // Mostrar formulario de login
-  document.getElementById('login-conn-panel').style.display = 'none';
-  document.getElementById('login-form-panel').style.display = 'block';
-  document.getElementById('cfg-conn-status').textContent = 'Conectado ✓';
-  toast('Conexión configurada ✓');
-}
 
 function setToday() {
   const d = new Date().toISOString().slice(0,10);
@@ -2736,21 +2702,15 @@ function populateSelects() {
 // CONFIG
 // ============================================================
 function loadConfig() {
-  document.getElementById('cfg-url').value = SB_URL;
-  document.getElementById('cfg-key').value = SB_KEY;
+  // Las credenciales están hardcodeadas — mostrar solo la URL para referencia
+  const cfgUrl = document.getElementById('cfg-url');
+  const cfgKey = document.getElementById('cfg-key');
+  if (cfgUrl) { cfgUrl.value = SB_URL; cfgUrl.readOnly = true; cfgUrl.style.color = 'var(--g4)'; }
+  if (cfgKey) { cfgKey.value = '(hardcodeada en el código)'; cfgKey.readOnly = true; cfgKey.style.color = 'var(--g4)'; }
 }
 
 function saveConfig() {
-  SB_URL = document.getElementById('cfg-url').value.trim();
-  SB_KEY = document.getElementById('cfg-key').value.trim();
-  localStorage.setItem('mat_sb_url', SB_URL);
-  localStorage.setItem('mat_sb_key', SB_KEY);
-  if (initSupabase()) {
-    toast('Conectado a Supabase ✓');
-    loadAll();
-  } else {
-    toast('Error al conectar', true);
-  }
+  toast('Las credenciales están hardcodeadas en el index.html — edítalas directamente en el archivo.', true);
 }
 
 async function testConnection() {
