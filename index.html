@@ -189,6 +189,17 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
 .desp-row{display:grid;grid-template-columns:130px 1fr 100px 80px 110px 120px auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--g1);font-size:11px}
 .desp-row:hover{background:var(--g1)}
 .desp-row-hdr{background:var(--k);color:var(--gl);font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;border-radius:6px 6px 0 0}
+/* LOGIN OVERLAY */
+#login-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
+#login-overlay>div{background:#fff;border-radius:12px;width:100%;max-width:360px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+.login-logo-wrap{margin-bottom:20px;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+/* CFG GRID */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:800px){.cfg-grid{grid-template-columns:1fr}}
+.ub-coord{background:#dcfce7;color:#166534}
+.alert{padding:10px 14px;border-radius:6px;font-size:11px;line-height:1.5;border-left:3px solid}
+.al-i{background:#eff6ff;color:#1e3a5f;border-color:#3b82f6}
+.al-w{background:#fef3cd;color:#856404;border-color:#f59e0b}
 /* IMPORT */
 .drop-zone{border:2.5px dashed var(--g2);border-radius:var(--rad);padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--g1)}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--g);background:var(--gf)}
@@ -208,16 +219,43 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
 </head>
 <body>
 
+<!-- ============================================================ -->
+<!-- LOGIN OVERLAY -->
+<!-- ============================================================ -->
+<div id="login-overlay">
+  <div>
+    <div class="login-logo-wrap">
+      <img id="empresa-logo-login" src="" style="height:54px;width:auto;object-fit:contain;display:none" alt="Logo">
+      <span id="empresa-nombre-login" style="font-size:22px;font-weight:700;font-family:'Barlow Condensed',sans-serif;color:var(--k);letter-spacing:1px">INGETEL</span>
+      <span style="font-size:11px;color:var(--g3);letter-spacing:1px;font-weight:600;text-transform:uppercase">Gestión de Materiales · Nokia 2026</span>
+    </div>
+    <div class="fg">
+      <label class="fl">Correo electrónico</label>
+      <input type="email" class="fc" id="login-email" placeholder="usuario@ingetel.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+    </div>
+    <div class="fg">
+      <label class="fl">Contraseña</label>
+      <input type="password" class="fc" id="login-password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="login-err" style="display:none;color:#c0392b;font-size:12px;margin-bottom:10px;padding:8px 10px;background:#fef2f2;border-radius:6px;border-left:3px solid #c0392b;text-align:left">Credenciales incorrectas</div>
+    <button class="btn bp btn-lg" style="width:100%;justify-content:center;border-radius:8px" id="login-btn" onclick="doLogin()">Ingresar</button>
+    <div style="margin-top:14px;font-size:10px;color:var(--g3)">Versión 2.0 · <span id="cfg-conn-status">Conectando…</span></div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <header class="hdr">
   <div class="hdr-brand">
-    <div>
+    <img id="empresa-logo-header" src="" style="height:34px;width:auto;object-fit:contain;display:none" alt="Logo">
+    <div id="empresa-nombre-header">
       <div class="bn">INGETEL</div>
       <span class="bs">NOKIA · 2026</span>
     </div>
     <div class="htit">Gestión de Materiales</div>
   </div>
-  <div id="userBadge" class="user-badge ub-admin" onclick="cycleRole()">
+  <div id="userBadge" class="user-badge ub-admin" onclick="doLogout()" title="Cerrar sesión">
     &#9679; <span id="roleLabel">Admin</span>
   </div>
 </header>
@@ -228,8 +266,8 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
   <button class="nt" onclick="goTo('inventario')">Inventario</button>
   <button class="nt" onclick="goTo('movimientos')">Movimientos</button>
   <button class="nt" onclick="goTo('sitios')">Sitios</button>
-  <button class="nt" onclick="goTo('catalogo')">Catálogo</button>
-  <button class="nt" onclick="goTo('config')">Config</button>
+  <button class="nt" id="nav-catalogo" onclick="goTo('catalogo')">Catálogo</button>
+  <button class="nt" id="nav-config" onclick="goTo('config')">Config</button>
 </nav>
 
 <main class="main">
@@ -369,6 +407,7 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
       <h2>Inventario de Materiales</h2>
       <div style="display:flex;gap:6px">
         <button class="btn bk btn-sm" onclick="openImportModal()">&#8593; Importar</button>
+        <button class="btn bk btn-sm" id="btn-agregar-bodega" onclick="openBodegaModal()" title="Agregar nueva bodega">+ Bodega</button>
         <button class="btn bp btn-sm" onclick="openMovModal('Entrada')">+ Entrada</button>
         <button class="btn bd btn-sm" onclick="openDespachoModal()">&#8599; Despacho</button>
       </div>
@@ -431,9 +470,12 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
         </div>
         <div class="fg">
           <label class="fl">Material</label>
-          <select class="fc" id="mov-material" onchange="onMaterialChange()">
-            <option value="">-- Seleccionar material --</option>
-          </select>
+          <div class="combo-wrap">
+            <input type="text" class="combo-input" id="mov-mat-search"
+              placeholder="Escribe nombre o código del material..."
+              oninput="filterEntradaCombo('mov')" onfocus="openEntradaCombo('mov')" autocomplete="off">
+            <div class="combo-drop" id="mov-mat-drop"></div>
+          </div>
         </div>
         <div class="g2">
           <div class="fg">
@@ -587,6 +629,12 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
       </div>
       <div id="sitio-detalle-total" style="margin-top:10px;text-align:right;font-size:12px;font-weight:700;color:var(--k)"></div>
     </div>
+
+    <!-- Despachos del sitio -->
+    <div style="border-top:1px solid var(--g2);padding:16px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--g4);margin-bottom:10px">Despachos registrados</div>
+      <div id="sitio-despachos-list"></div>
+    </div>
   </div>
 </section>
 
@@ -623,45 +671,131 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
 <!-- SCREEN: CONFIG -->
 <!-- ============================================================ -->
 <section id="screen-config" class="screen">
-  <div class="card">
-    <div class="card-h"><h2>Configuración de Conexión</h2></div>
-    <div class="card-b">
-      <div class="fg">
-        <label class="fl">Supabase URL</label>
-        <input type="text" class="fc" id="cfg-url" placeholder="https://xxxx.supabase.co">
-      </div>
-      <div class="fg">
-        <label class="fl">Supabase Anon Key</label>
-        <input type="text" class="fc" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5...">
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn bp" onclick="saveConfig()">Guardar y Conectar</button>
-        <button class="btn bou" onclick="testConnection()">Probar Conexión</button>
-      </div>
-      <div id="cfg-status" style="margin-top:12px;font-size:11px"></div>
-    </div>
+  <div class="fb mb14" style="position:sticky;top:50px;z-index:100;background:#f0f2f0;padding:10px 0;border-bottom:1px solid var(--g2)">
+    <h1 style="font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700">⚙ Configuración de Empresa</h1>
+    <button class="btn bk btn-sm" onclick="goTo('dashboard')">← Dashboard</button>
   </div>
 
-  <div class="card">
-    <div class="card-h"><h2>Bodegas</h2></div>
-    <div class="card-b">
-      <div id="bodegas-list"></div>
-      <div class="g2" style="margin-top:12px">
-        <div class="fg"><label class="fl">Nombre Bodega</label><input type="text" class="fc" id="new-bodega-nombre" placeholder="Ej: Bogotá"></div>
-        <div class="fg"><label class="fl">Regional</label><input type="text" class="fc" id="new-bodega-regional" placeholder="Centro"></div>
-      </div>
-      <button class="btn bp btn-sm" onclick="addBodega()">+ Agregar Bodega</button>
-    </div>
-  </div>
+  <div class="cfg-grid">
 
-  <div class="card">
-    <div class="card-h"><h2>Información de la App</h2></div>
-    <div class="card-b" style="font-size:12px;line-height:1.8;color:var(--g4)">
-      <div class="config-row"><span>Versión</span><strong>1.0.0</strong></div>
-      <div class="config-row"><span>Materiales en catálogo</span><strong id="cfg-total-mat">—</strong></div>
-      <div class="config-row"><span>Total movimientos</span><strong id="cfg-total-mov">—</strong></div>
-      <div class="config-row"><span>Bodegas</span><strong id="cfg-total-bod">—</strong></div>
-      <div class="config-row"><span>Última sincronización</span><strong id="cfg-sync">—</strong></div>
+    <!-- IZQUIERDA: campos de configuración -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Empresa -->
+      <div id="cfg-sect-empresa" class="card">
+        <div class="card-h"><h2>Empresa</h2></div>
+        <div class="card-b">
+          <div class="alert al-i" style="margin-bottom:14px">Solo el administrador puede modificar esta configuración. Los cambios se aplican a todos los usuarios.</div>
+          <div style="display:grid;gap:12px">
+            <div class="fg"><label class="fl">Nombre de la empresa</label>
+              <input type="text" class="fc" id="cfg-nombre" placeholder="Ej: Ingetel SAS"></div>
+            <div class="fg"><label class="fl">Nombre corto (reportes)</label>
+              <input type="text" class="fc" id="cfg-nombre-corto" placeholder="Ej: Ingetel"></div>
+            <div class="fg">
+              <label class="fl">URL del logo (imagen pública)</label>
+              <input type="text" class="fc" id="cfg-logo-url" placeholder="https://i.imgur.com/tu-logo.png">
+              <small style="color:var(--g3);font-size:10px">Sube el logo a imgur.com u otro hosting y pega la URL directa</small>
+            </div>
+            <div class="fg">
+              <label class="fl">Color primario</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="color" id="cfg-color" value="#1a9c1a" style="width:50px;height:36px;border:none;cursor:pointer;border-radius:6px">
+                <input type="text" class="fc" id="cfg-color-hex" placeholder="#1a9c1a" style="width:120px">
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn bp" onclick="guardarConfigEmpresa()">💾 Guardar Configuración</button>
+            <button class="btn bk btn-sm" onclick="renderConfigEmpresa()">↩ Descartar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conexión Supabase -->
+      <div id="cfg-sect-supabase" class="card">
+        <div class="card-h"><h2>Conexión Supabase</h2></div>
+        <div class="card-b">
+          <div class="fg"><label class="fl">Supabase URL</label>
+            <input type="text" class="fc" id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
+          <div class="fg"><label class="fl">Supabase Anon Key</label>
+            <input type="text" class="fc" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5..."></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn bp" onclick="saveConfig()">Guardar y Conectar</button>
+            <button class="btn bou" onclick="testConnection()">Probar Conexión</button>
+          </div>
+          <div id="cfg-status" style="margin-top:10px;font-size:11px"></div>
+        </div>
+      </div>
+
+      <!-- Bodegas -->
+      <div class="card">
+        <div class="card-h">
+          <h2>Bodegas</h2>
+          <button class="btn bp btn-sm" onclick="openBodegaModal()">+ Agregar Bodega</button>
+        </div>
+        <div class="card-b" style="padding:0">
+          <div id="bodegas-list"></div>
+        </div>
+      </div>
+
+      <!-- Stats app -->
+      <div class="card">
+        <div class="card-h"><h2>Información de la App</h2></div>
+        <div class="card-b" style="font-size:12px;line-height:1.8;color:var(--g4)">
+          <div class="config-row"><span>Versión</span><strong>2.0.0</strong></div>
+          <div class="config-row"><span>Materiales en catálogo</span><strong id="cfg-total-mat">—</strong></div>
+          <div class="config-row"><span>Total movimientos</span><strong id="cfg-total-mov">—</strong></div>
+          <div class="config-row"><span>Bodegas</span><strong id="cfg-total-bod">—</strong></div>
+          <div class="config-row"><span>Última sincronización</span><strong id="cfg-sync">—</strong></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DERECHA: usuarios y historial -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Usuarios y roles -->
+      <div id="cfg-sect-usuarios" class="card">
+        <div class="card-h">
+          <h2>👥 Usuarios y Roles</h2>
+          <button class="btn bk btn-sm" onclick="cargarRoles()">↻ Actualizar</button>
+        </div>
+        <div style="padding:0">
+          <table class="tbl">
+            <thead><tr>
+              <th>Nombre</th><th>Rol</th>
+              <th style="font-size:8px;color:var(--g3)">User ID</th>
+            </tr></thead>
+            <tbody id="tbody-roles">
+              <tr><td colspan="3" style="padding:16px;text-align:center;color:var(--g3)">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Historial de cambios -->
+      <div id="cfg-sect-historial" class="card">
+        <div class="card-h">
+          <h2>📋 Historial de Cambios</h2>
+          <button class="btn bk btn-sm" onclick="cargarHistorial()">↻ Actualizar</button>
+        </div>
+        <div style="padding:0;overflow-x:auto;max-height:460px;overflow-y:auto">
+          <table class="tbl">
+            <thead style="position:sticky;top:0;z-index:2"><tr>
+              <th style="min-width:110px">Fecha</th>
+              <th style="min-width:100px">Usuario</th>
+              <th style="min-width:130px">Acción</th>
+              <th style="min-width:100px">Referencia</th>
+              <th>Detalle</th>
+            </tr></thead>
+            <tbody id="tbody-historial">
+              <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--g3)">Cargando historial…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -680,9 +814,12 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
     <div class="modal-b">
       <div class="fg">
         <label class="fl">Material</label>
-        <select class="fc" id="qmov-material" onchange="onQMaterialChange()">
-          <option value="">-- Seleccionar material --</option>
-        </select>
+        <div class="combo-wrap">
+          <input type="text" class="combo-input" id="qmov-mat-search"
+            placeholder="Escribe nombre o código del material..."
+            oninput="filterEntradaCombo('qmov')" onfocus="openEntradaCombo('qmov')" autocomplete="off">
+          <div class="combo-drop" id="qmov-mat-drop"></div>
+        </div>
       </div>
       <div class="g2">
         <div class="fg">
@@ -712,6 +849,45 @@ input[type=date].fc{min-width:0;width:100%;box-sizing:border-box;-webkit-appeara
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
         <button class="btn bou" onclick="closeModal('modal-mov')">Cancelar</button>
         <button class="btn bp" onclick="guardarQMovimiento()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: BODEGA -->
+<!-- ============================================================ -->
+<div id="modal-bodega" class="modal-bg">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="modal-bodega-title">Nueva Bodega</h3>
+      <button class="modal-close" onclick="closeModal('modal-bodega')">✕</button>
+    </div>
+    <div class="modal-b">
+      <input type="hidden" id="bodega-edit-id">
+      <div class="g2">
+        <div class="fg">
+          <label class="fl">Nombre de la Bodega *</label>
+          <input type="text" class="fc" id="bodega-nombre" placeholder="Ej: Bodega Medellín">
+        </div>
+        <div class="fg">
+          <label class="fl">Regional</label>
+          <input type="text" class="fc" id="bodega-regional" placeholder="Ej: Centro">
+        </div>
+      </div>
+      <div class="g2">
+        <div class="fg">
+          <label class="fl">Ciudad</label>
+          <input type="text" class="fc" id="bodega-ciudad" placeholder="Ej: Medellín">
+        </div>
+        <div class="fg">
+          <label class="fl">Dirección</label>
+          <input type="text" class="fc" id="bodega-direccion" placeholder="Ej: Calle 10 # 20-30">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn bou" onclick="closeModal('modal-bodega')">Cancelar</button>
+        <button class="btn bp" onclick="guardarBodega()">Guardar Bodega</button>
       </div>
     </div>
   </div>
@@ -1165,8 +1341,18 @@ let sitiosData = [];     // sitios
 let invViewData = [];    // computed for inventario view
 
 let filters = { cat: '', catCat: '' };
-let currentRole = 'admin'; // admin | operador | viewer
+let currentRole = 'viewer'; // admin | coordinador | operador | viewer
+let currentUser  = '';       // email del usuario autenticado
+let currentNombre = '';      // nombre visible
 let editMovId = null;
+
+// Empresa config
+let _empresaConfig = {
+  nombre: 'Ingetel SAS',
+  nombre_corto: 'Ingetel',
+  color_primario: '#1a9c1a',
+  logo_url: ''
+};
 
 // ============================================================
 // INIT
@@ -1175,12 +1361,107 @@ document.addEventListener('DOMContentLoaded', async () => {
   setToday();
   loadConfig();
   if (initSupabase()) {
-    await loadAll();
+    // Mostrar overlay de login; esperar autenticación
+    document.getElementById('login-overlay').style.display = 'flex';
+    document.getElementById('cfg-conn-status').textContent = 'Conectado ✓';
+    await loadEmpresaConfig();
+
+    // Escuchar cambios de sesión
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (!session && event === 'TOKEN_REFRESHED')) {
+        toast('Sesión expirada — vuelve a iniciar sesión', true);
+        showLoginOverlay();
+      }
+    });
+
+    // Verificar si ya hay sesión activa
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await afterLogin(session.user);
+    }
   } else {
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('cfg-conn-status').textContent = 'Sin conexión';
     goTo('config');
     toast('Configura la conexión a Supabase primero', true);
   }
 });
+
+function showLoginOverlay() {
+  currentRole = 'viewer'; currentUser = ''; currentNombre = '';
+  const ov = document.getElementById('login-overlay');
+  ov.style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-err').style.display = 'none';
+  const btn = document.getElementById('login-btn');
+  if (btn) { btn.textContent = 'Ingresar'; btn.disabled = false; }
+}
+
+async function doLogin() {
+  if (!sb) { toast('Sin conexión Supabase', true); return; }
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-err');
+  const btn      = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if (!email)    { errEl.textContent = 'Ingresa tu correo';    errEl.style.display = 'block'; return; }
+  if (!password) { errEl.textContent = 'Ingresa tu contraseña'; errEl.style.display = 'block'; return; }
+  btn.textContent = 'Ingresando…'; btn.disabled = true;
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      errEl.textContent = 'Credenciales incorrectas';
+      errEl.style.display = 'block';
+      document.getElementById('login-password').value = '';
+      btn.textContent = 'Ingresar'; btn.disabled = false;
+      return;
+    }
+    await afterLogin(data.user);
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = 'block';
+    btn.textContent = 'Ingresar'; btn.disabled = false;
+  }
+}
+
+async function afterLogin(user) {
+  if (!sb) return;
+  const { data: roleData } = await sb.from('user_roles')
+    .select('role, nombre').eq('user_id', user.id).single();
+  currentRole   = roleData?.role   || 'operador';
+  currentNombre = roleData?.nombre || user.email;
+  currentUser   = user.email;
+
+  // Aplicar visibilidad de nav y controles por rol
+  const isAdmin = currentRole === 'admin';
+  const isCoord = currentRole === 'coordinador';
+  const navCat = document.getElementById('nav-catalogo');
+  const navCfg = document.getElementById('nav-config');
+  if (navCat) navCat.style.display = (isAdmin || isCoord) ? '' : 'none';
+  if (navCfg) navCfg.style.display = (isAdmin || isCoord) ? '' : 'none';
+  // Botón bodega en inventario: visible para admin y coordinador
+  const btnBodega = document.getElementById('btn-agregar-bodega');
+  if (btnBodega) btnBodega.style.display = (isAdmin || isCoord) ? '' : 'none';
+
+  // Actualizar badge
+  const ROLE_LABELS   = { admin:'⚙ Admin', coordinador:'🏢 Coord', operador:'👤 Operador', viewer:'👁 Viewer' };
+  const ROLE_CLASSES  = { admin:'ub-admin', coordinador:'ub-coord', operador:'ub-op', viewer:'ub-viewer' };
+  const badge = document.getElementById('userBadge');
+  badge.className = 'user-badge ' + (ROLE_CLASSES[currentRole] || 'ub-op');
+  document.getElementById('roleLabel').textContent = (ROLE_LABELS[currentRole] || currentRole) + ' ▸ Salir';
+
+  document.getElementById('login-overlay').style.display = 'none';
+
+  await loadAll();
+  toast('Bienvenido, ' + currentNombre);
+}
+
+async function doLogout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  if (sb) await sb.auth.signOut();
+  showLoginOverlay();
+}
 
 function setToday() {
   const d = new Date().toISOString().slice(0,10);
@@ -1291,30 +1572,183 @@ function goTo(screen) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(b => b.classList.remove('active'));
   document.getElementById('screen-' + screen).classList.add('active');
-  const idx = ['dashboard','inventario','movimientos','sitios','catalogo','config'].indexOf(screen);
-  document.querySelectorAll('.nt')[idx].classList.add('active');
-  if (screen === 'dashboard') renderDashboard();
-  if (screen === 'inventario') renderInventario();
+  // Activar tab por data-screen en lugar de índice posicional
+  const tab = document.querySelector(`.nt[onclick="goTo('${screen}')"]`);
+  if (tab) tab.classList.add('active');
+  if (screen === 'dashboard')   renderDashboard();
+  if (screen === 'inventario')  renderInventario();
   if (screen === 'movimientos') renderMovimientos();
-  if (screen === 'sitios') renderSitios();
-  if (screen === 'catalogo') renderCatalogo();
+  if (screen === 'sitios')      renderSitios();
+  if (screen === 'catalogo')    renderCatalogo();
+  if (screen === 'config')      renderConfigEmpresa();
 }
 
 // ============================================================
-// ROLE
+// EMPRESA CONFIG
 // ============================================================
-const ROLES = ['admin','operador','viewer'];
-const ROLE_LABELS = {admin:'Admin',operador:'Operador',viewer:'Viewer'};
-const ROLE_CLASSES = {admin:'ub-admin',operador:'ub-op',viewer:'ub-viewer'};
+async function loadEmpresaConfig() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('sync_metadata')
+      .select('value').eq('key', 'empresa_config').single();
+    if (data?.value) {
+      _empresaConfig = { ..._empresaConfig, ...JSON.parse(data.value) };
+    }
+  } catch(e) { console.warn('empresaConfig error:', e); }
+  applyEmpresaConfig();
+}
 
-function cycleRole() {
-  const i = ROLES.indexOf(currentRole);
-  currentRole = ROLES[(i + 1) % ROLES.length];
-  const badge = document.getElementById('userBadge');
-  badge.className = 'user-badge ' + ROLE_CLASSES[currentRole];
-  document.getElementById('roleLabel').textContent = ROLE_LABELS[currentRole];
-  renderInventario();
-  renderCatalogo();
+function applyEmpresaConfig() {
+  const cfg = _empresaConfig;
+  document.title = cfg.nombre + ' · Gestión de Materiales Nokia 2026';
+
+  const lh = document.getElementById('empresa-logo-header');
+  const nh = document.getElementById('empresa-nombre-header');
+  if (lh && nh) {
+    if (cfg.logo_url) {
+      lh.src = cfg.logo_url; lh.style.display = '';
+      nh.style.display = 'none';
+    } else {
+      lh.style.display = 'none'; nh.style.display = '';
+    }
+  }
+  const ll = document.getElementById('empresa-logo-login');
+  const nl = document.getElementById('empresa-nombre-login');
+  if (ll && nl) {
+    if (cfg.logo_url) {
+      ll.src = cfg.logo_url; ll.style.display = ''; nl.style.display = 'none';
+    } else {
+      ll.style.display = 'none'; nl.style.display = '';
+      nl.textContent = cfg.nombre || 'INGETEL';
+    }
+  }
+  if (cfg.color_primario) {
+    document.documentElement.style.setProperty('--g', cfg.color_primario);
+  }
+}
+
+async function saveEmpresaConfig() {
+  if (!sb) return;
+  const { error } = await sb.from('sync_metadata').upsert(
+    { key: 'empresa_config', value: JSON.stringify(_empresaConfig), updated_at: new Date().toISOString() },
+    { onConflict: 'key' }
+  );
+  if (error) toast('Error guardando config: ' + error.message, true);
+  else { applyEmpresaConfig(); toast('Configuración de empresa guardada ✓'); }
+}
+
+function renderConfigEmpresa() {
+  document.getElementById('cfg-nombre').value       = _empresaConfig.nombre       || '';
+  document.getElementById('cfg-nombre-corto').value = _empresaConfig.nombre_corto || '';
+  document.getElementById('cfg-logo-url').value     = _empresaConfig.logo_url     || '';
+  document.getElementById('cfg-color').value        = _empresaConfig.color_primario || '#1a9c1a';
+  document.getElementById('cfg-color-hex').value    = _empresaConfig.color_primario || '#1a9c1a';
+
+  document.getElementById('cfg-color').oninput = function() {
+    document.getElementById('cfg-color-hex').value = this.value;
+  };
+  document.getElementById('cfg-color-hex').oninput = function() {
+    if (/^#[0-9A-Fa-f]{6}$/.test(this.value))
+      document.getElementById('cfg-color').value = this.value;
+  };
+
+  // Visibilidad por rol: coordinador solo ve bodegas e historial
+  const isAdmin = currentRole === 'admin';
+  const isCoord = currentRole === 'coordinador';
+  document.getElementById('cfg-sect-empresa').style.display    = isAdmin ? '' : 'none';
+  document.getElementById('cfg-sect-supabase').style.display   = isAdmin ? '' : 'none';
+  document.getElementById('cfg-sect-usuarios').style.display   = isAdmin ? '' : 'none';
+  document.getElementById('cfg-sect-historial').style.display  = (isAdmin || isCoord) ? '' : 'none';
+
+  if (isAdmin) { cargarRoles(); cargarHistorial(); }
+  else if (isCoord) { cargarHistorial(); }
+}
+
+async function guardarConfigEmpresa() {
+  _empresaConfig.nombre         = document.getElementById('cfg-nombre').value.trim()       || 'Empresa';
+  _empresaConfig.nombre_corto   = document.getElementById('cfg-nombre-corto').value.trim() || 'Nokia';
+  _empresaConfig.logo_url       = document.getElementById('cfg-logo-url').value.trim();
+  _empresaConfig.color_primario = document.getElementById('cfg-color-hex').value.trim()    || '#1a9c1a';
+  await saveEmpresaConfig();
+}
+
+// ── Usuarios y roles ─────────────────────────────────────────
+async function cargarRoles() {
+  const tbody = document.getElementById('tbody-roles');
+  if (!tbody || !sb || currentRole !== 'admin') return;
+  tbody.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--g3)">Cargando…</td></tr>';
+  const { data, error } = await sb.from('user_roles').select('user_id, role, nombre').order('role');
+  if (error || !data) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--r)">Error al cargar usuarios</td></tr>';
+    return;
+  }
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--g3)">Sin usuarios registrados</td></tr>';
+    return;
+  }
+  const rolCfg = {
+    admin:        { cls: 'ub-admin', label: '⚙ Admin',        tip: 'Acceso total: configuración, catálogo, eliminar registros' },
+    coordinador:  { cls: 'ub-coord', label: '🏢 Coordinador', tip: 'Despachos, sitios y movimientos — sin configuración' },
+    operador:     { cls: 'ub-op',    label: '👤 Operador',     tip: 'Crear movimientos y despachos' },
+    viewer:       { cls: 'ub-viewer',label: '👁 Viewer',       tip: 'Solo lectura' }
+  };
+  tbody.innerHTML = data.map((u, i) => {
+    const r   = rolCfg[u.role] || { cls: 'ub-op', label: u.role, tip: '' };
+    const uid = u.user_id ? u.user_id.slice(0, 8) + '…' : '—';
+    return `<tr style="${i % 2 === 0 ? '' : 'background:#f9f9f9'}">
+      <td style="font-weight:600">${u.nombre || '—'}</td>
+      <td><span class="user-badge ${r.cls}" style="cursor:help;font-size:10px" title="${r.tip}">${r.label}</span></td>
+      <td style="font-size:9px;color:var(--g3);font-family:monospace" title="${u.user_id || ''}">${uid}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Historial de cambios ──────────────────────────────────────
+async function logCambio(accion, entidadId = '', detalle = '') {
+  if (!sb || !currentUser) return;
+  try {
+    await sb.from('historial').insert({
+      user_email: currentUser, accion,
+      entidad_id: String(entidadId), detalle: String(detalle)
+    });
+  } catch(e) { console.warn('logCambio error:', e); }
+}
+
+async function cargarHistorial() {
+  const tbody = document.getElementById('tbody-historial');
+  if (!tbody) return;
+  if (!sb || currentRole !== 'admin') {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--g3)">Solo disponible para administradores</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--g3)">Cargando…</td></tr>';
+  const { data, error } = await sb.from('historial')
+    .select('*').order('created_at', { ascending: false }).limit(150);
+  if (error || !data) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--r)">Error al cargar historial</td></tr>';
+    return;
+  }
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--g3)">Sin registros aún</td></tr>';
+    return;
+  }
+  const colores = {
+    'Nuevo Despacho':'#1a7a1a', 'Finalizar Despacho':'#0f4c75',
+    'Editar Despacho':'#d68910', 'Nuevo Sitio':'#144E4A',
+    'Editar Sitio':'#144E4A', 'Eliminar Movimiento':'#c0392b',
+    'Nueva Entrada':'#1a5276', 'Nueva Salida':'#7c3aed'
+  };
+  tbody.innerHTML = data.map((h, i) => {
+    const fecha = new Date(h.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+    const col   = colores[h.accion] || '#555';
+    return `<tr style="${i % 2 === 0 ? '' : 'background:#f9f9f9'}">
+      <td style="font-size:10px;color:var(--g4);white-space:nowrap">${fecha}</td>
+      <td style="font-size:10px">${h.user_email || '—'}</td>
+      <td><span style="background:${col}20;color:${col};border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700">${h.accion || '—'}</span></td>
+      <td style="font-size:10px;font-weight:600">${h.entidad_id || '—'}</td>
+      <td style="font-size:10px;color:var(--g4)">${h.detalle || ''}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ============================================================
@@ -1628,15 +2062,57 @@ function onTipoChange() {
   // Las Salidas se manejan exclusivamente por el modal de Despachos
 }
 
-function onMaterialChange() {
-  const catId = parseInt(document.getElementById('mov-material').value);
+// ─── Combobox buscable para Entradas ─────────────────────────
+let movComboSel  = null;  // material seleccionado en form de entrada (movimientos screen)
+let qmovComboSel = null;  // material seleccionado en modal entrada rápida
+
+function filterEntradaCombo(pfx) {
+  const q = document.getElementById(`${pfx}-mat-search`).value.toLowerCase().trim();
+  renderEntradaComboOpts(q, pfx);
+  document.getElementById(`${pfx}-mat-drop`).classList.add('open');
+}
+
+function openEntradaCombo(pfx) {
+  renderEntradaComboOpts(document.getElementById(`${pfx}-mat-search`).value.toLowerCase().trim(), pfx);
+  document.getElementById(`${pfx}-mat-drop`).classList.add('open');
+}
+
+function renderEntradaComboOpts(q, pfx) {
+  const drop = document.getElementById(`${pfx}-mat-drop`);
+  let cats = catalogoData.filter(c => c.activo !== false);
+  if (q) cats = cats.filter(c => c.nombre.toLowerCase().includes(q) || c.codigo.toLowerCase().includes(q));
+  if (!cats.length) {
+    drop.innerHTML = `<div class="combo-empty">Sin resultados${q ? ` para "${q}"` : ''}</div>`;
+    return;
+  }
+  drop.innerHTML = cats.slice(0, 60).map(c => `
+    <div class="combo-opt" onclick="selectEntradaCombo(${c.id},'${pfx}',event)">
+      <span class="combo-opt-name">${highlight(c.nombre, q)}</span>
+      <span class="combo-opt-meta">${c.codigo} · ${c.categoria} · ${formatCOP(c.costo_unitario)}</span>
+    </div>`).join('');
+}
+
+function selectEntradaCombo(catId, pfx, e) {
+  e?.stopPropagation();
   const cat = catalogoData.find(c => c.id === catId);
-  const campo = document.getElementById('mov-costo');
-  if (cat) {
+  if (!cat) return;
+  document.getElementById(`${pfx}-mat-search`).value = cat.nombre;
+  document.getElementById(`${pfx}-mat-drop`).classList.remove('open');
+  if (pfx === 'mov') {
+    movComboSel = cat;
+    // Actualizar precio
+    const campo = document.getElementById('mov-costo');
     campo.value = cat.costo_unitario || 0;
     campo.readOnly = true;
     campo.style.color = 'var(--b)';
+    campo.style.background = '';
     document.getElementById('btn-override-precio').textContent = 'Editar precio';
+    document.getElementById('mov-precio-note').textContent = 'Precio tomado del catálogo.';
+    document.getElementById('mov-precio-note').style.color = '';
+    if (bodegasData.length === 1) document.getElementById('mov-bodega').value = bodegasData[0].id;
+  } else {
+    qmovComboSel = cat;
+    if (bodegasData.length === 1) document.getElementById('qmov-bodega').value = bodegasData[0].id;
   }
 }
 
@@ -1652,9 +2128,7 @@ function togglePrecioOverride() {
     document.getElementById('mov-precio-note').textContent = '⚠ Editando precio manualmente. Este valor solo aplica a este movimiento.';
     document.getElementById('mov-precio-note').style.color = 'var(--o)';
   } else {
-    const catId = parseInt(document.getElementById('mov-material').value);
-    const cat = catalogoData.find(c => c.id === catId);
-    if (cat) campo.value = cat.costo_unitario || 0;
+    if (movComboSel) campo.value = movComboSel.costo_unitario || 0;
     campo.readOnly = true;
     campo.style.color = 'var(--b)';
     campo.style.background = '';
@@ -1669,7 +2143,7 @@ async function guardarMovimiento() {
   const tipo = document.getElementById('mov-tipo').value;
   const doc = document.getElementById('mov-doc').value.trim();
   const fecha = document.getElementById('mov-fecha').value;
-  const catId = parseInt(document.getElementById('mov-material').value);
+  const catId = movComboSel?.id;
   const bodId = parseInt(document.getElementById('mov-bodega').value);
   const cantidad = parseFloat(document.getElementById('mov-cantidad').value) || 0;
   const costo = parseFloat(document.getElementById('mov-costo').value) || 0;
@@ -1714,8 +2188,11 @@ function resetMovForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('mov-material').value = '';
-  document.getElementById('mov-sitio').value = '';
+  movComboSel = null;
+  document.getElementById('mov-mat-search').value = '';
+  document.getElementById('mov-mat-drop').classList.remove('open');
+  const movSitioEl = document.getElementById('mov-sitio');
+  if (movSitioEl) movSitioEl.value = '';
   const campo = document.getElementById('mov-costo');
   campo.value = '0'; campo.readOnly = true;
   campo.style.color = 'var(--b)'; campo.style.background = '';
@@ -1739,6 +2216,10 @@ async function eliminarMovimiento(id) {
 // CATÁLOGO
 // ============================================================
 function renderCatalogo() {
+  const canEdit = currentRole === 'admin' || currentRole === 'coordinador';
+  const btnNuevo = document.getElementById('btn-nuevo-mat');
+  if (btnNuevo) btnNuevo.style.display = canEdit ? '' : 'none';
+
   const buscar = (document.getElementById('cat-buscar')?.value || '').toLowerCase();
   let rows = catalogoData.filter(c => {
     if (filters.catCat && c.categoria !== filters.catCat) return false;
@@ -1758,9 +2239,7 @@ function renderCatalogo() {
       <td class="num">${formatCOP(c.costo_unitario)}</td>
       <td><span class="badge ${c.activo ? 'bg-g' : 'bg-r'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
-        ${currentRole !== 'viewer' ? `
-          <button class="btn-edit" onclick="editCatalogo(${c.id})">Editar</button>
-        ` : ''}
+        ${canEdit ? `<button class="btn-edit" onclick="editCatalogo(${c.id})">Editar</button>` : ''}
       </td>
     </tr>`).join('') || '<tr><td colspan="9" class="empty">Sin materiales</td></tr>';
 }
@@ -1827,7 +2306,9 @@ async function guardarCatalogo() {
 function openMovModal(tipo) {
   document.getElementById('qmov-tipo').value = tipo;
   document.getElementById('modal-mov-title').textContent = tipo === 'Entrada' ? 'Nueva Entrada' : 'Nueva Salida';
-  document.getElementById('qmov-material').value = '';
+  qmovComboSel = null;
+  document.getElementById('qmov-mat-search').value = '';
+  document.getElementById('qmov-mat-drop').classList.remove('open');
   document.getElementById('qmov-cantidad').value = '';
   document.getElementById('qmov-comentarios').value = '';
   document.getElementById('qmov-doc').value = '';
@@ -1837,21 +2318,18 @@ function openMovModal(tipo) {
 
 function openMovModalPreloaded(tipo, catId, bodId) {
   openMovModal(tipo);
-  document.getElementById('qmov-material').value = catId;
-  document.getElementById('qmov-bodega').value = bodId;
-}
-
-function onQMaterialChange() {
-  // auto-select bodega if only one
-  if (bodegasData.length === 1) {
-    document.getElementById('qmov-bodega').value = bodegasData[0].id;
+  const cat = catalogoData.find(c => c.id === catId);
+  if (cat) {
+    qmovComboSel = cat;
+    document.getElementById('qmov-mat-search').value = cat.nombre;
   }
+  document.getElementById('qmov-bodega').value = bodId;
 }
 
 async function guardarQMovimiento() {
   if (!sb) { toast('Sin conexión', true); return; }
   const tipo = document.getElementById('qmov-tipo').value;
-  const catId = parseInt(document.getElementById('qmov-material').value);
+  const catId = qmovComboSel?.id;
   const bodId = parseInt(document.getElementById('qmov-bodega').value);
   const cantidad = parseFloat(document.getElementById('qmov-cantidad').value) || 0;
   const doc = document.getElementById('qmov-doc').value.trim();
@@ -1891,24 +2369,93 @@ async function guardarQMovimiento() {
 function renderBodegas() {
   const el = document.getElementById('bodegas-list');
   if (!el) return;
-  el.innerHTML = bodegasData.map(b => `
-    <div class="config-row">
-      <span><strong>${b.nombre}</strong> <span style="color:var(--g3)">${b.regional}</span></span>
-    </div>`).join('');
-  document.getElementById('cfg-total-bod').textContent = bodegasData.length;
+  if (!bodegasData.length) {
+    el.innerHTML = '<div style="padding:14px;font-size:11px;color:var(--g3)">Sin bodegas registradas</div>';
+  } else {
+    el.innerHTML = bodegasData.map(b => `
+      <div class="config-row" style="padding:10px 16px">
+        <div>
+          <div style="font-weight:700;font-size:12px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
+            <span>${b.nombre}</span>
+            <span style="color:var(--g3);font-weight:400">– ${b.regional || 'Sin regional'}</span>
+            ${b.ciudad ? `<span style="color:var(--g4);font-weight:400;font-size:10px">· ${b.ciudad}</span>` : ''}
+            ${b.direccion ? `<span style="color:var(--g3);font-weight:400;font-size:10px">· ${b.direccion}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          ${(currentRole === 'admin' || currentRole === 'coordinador') ? `<button class="btn-edit" onclick="editBodega(${b.id})">Editar</button>` : ''}
+          ${currentRole === 'admin' ? `<button class="btn-del" onclick="eliminarBodega(${b.id},'${b.nombre.replace(/'/g,"\\'")}')">Eliminar</button>` : ''}
+        </div>
+      </div>`).join('');
+  }
+  const tot = document.getElementById('cfg-total-bod');
+  if (tot) tot.textContent = bodegasData.length;
 }
 
-async function addBodega() {
+function openBodegaModal() {
+  document.getElementById('bodega-edit-id').value = '';
+  document.getElementById('bodega-nombre').value = '';
+  document.getElementById('bodega-regional').value = '';
+  document.getElementById('bodega-ciudad').value = '';
+  document.getElementById('bodega-direccion').value = '';
+  document.getElementById('modal-bodega-title').textContent = 'Nueva Bodega';
+  openModal('modal-bodega');
+}
+
+function editBodega(id) {
+  const b = bodegasData.find(x => x.id === id);
+  if (!b) return;
+  document.getElementById('bodega-edit-id').value   = id;
+  document.getElementById('bodega-nombre').value    = b.nombre    || '';
+  document.getElementById('bodega-regional').value  = b.regional  || '';
+  document.getElementById('bodega-ciudad').value    = b.ciudad    || '';
+  document.getElementById('bodega-direccion').value = b.direccion || '';
+  document.getElementById('modal-bodega-title').textContent = 'Editar Bodega';
+  openModal('modal-bodega');
+}
+
+async function guardarBodega() {
   if (!sb) { toast('Sin conexión', true); return; }
-  const nombre = document.getElementById('new-bodega-nombre').value.trim();
-  const regional = document.getElementById('new-bodega-regional').value.trim() || 'Sin regional';
+  const editId = document.getElementById('bodega-edit-id').value;
+  const nombre   = document.getElementById('bodega-nombre').value.trim();
+  const regional = document.getElementById('bodega-regional').value.trim() || 'Sin regional';
+  const ciudad   = document.getElementById('bodega-ciudad').value.trim() || null;
+  const direccion = document.getElementById('bodega-direccion').value.trim() || null;
   if (!nombre) { toast('Ingresa nombre de bodega', true); return; }
-  const { error } = await sb.from('bodegas').insert({ nombre, regional });
+
+  const payload = { nombre, regional, ciudad, direccion };
+  let error;
+  if (editId) {
+    ({ error } = await sb.from('bodegas').update(payload).eq('id', parseInt(editId)));
+  } else {
+    ({ error } = await sb.from('bodegas').insert(payload));
+  }
   if (error) { toast('Error: ' + error.message, true); return; }
-  toast('Bodega agregada ✓');
-  document.getElementById('new-bodega-nombre').value = '';
-  document.getElementById('new-bodega-regional').value = '';
+  toast(editId ? 'Bodega actualizada ✓' : 'Bodega agregada ✓');
+  closeModal('modal-bodega');
   await loadBodegas();
+  populateSelects();
+  renderBodegas();
+}
+
+async function eliminarBodega(id, nombre) {
+  if (currentRole !== 'admin') { toast('Solo el administrador puede eliminar bodegas', true); return; }
+  if (!confirm(`¿Eliminar la bodega "${nombre}"?\n\nSe eliminará también todo el stock e inventario asociado a esta bodega.`)) return;
+  if (!sb) return;
+
+  // Eliminar stock de esta bodega
+  const { error: eS } = await sb.from('mat_stock').delete().eq('bodega_id', id);
+  if (eS) { toast('Error eliminando stock: ' + eS.message, true); return; }
+
+  // Eliminar la bodega
+  const { error: eB } = await sb.from('bodegas').delete().eq('id', id);
+  if (eB) { toast('Error eliminando bodega: ' + eB.message, true); return; }
+
+  toast(`Bodega "${nombre}" eliminada ✓`);
+  await Promise.all([loadBodegas(), loadStock()]);
+  buildInventarioView();
+  renderDashboard();
+  renderInventario();
   populateSelects();
   renderBodegas();
 }
@@ -1932,13 +2479,7 @@ function populateSelects() {
     invBod.innerHTML = '<option value="">Todas las bodegas</option>' + bodegasData.map(b => `<option value="${b.nombre}">${b.nombre}</option>`).join('');
   }
 
-  // Material selects
-  const matOpts = catalogoData.map(c => `<option value="${c.id}">[${c.categoria}] ${c.nombre} (${c.codigo})</option>`).join('');
-  ['mov-material','qmov-material'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = '<option value="">-- Seleccionar material --</option>' + matOpts;
-  });
+  // Material selects — solo los que aún usan <select>, el combobox no necesita populate
 
   // Auto-select first bodega if only one
   if (bodegasData.length === 1) {
@@ -2085,7 +2626,7 @@ function addDespItemFromCombo() {
   if (despItems.find(i => i.catId === comboSelected.id && !i._deleted)) {
     toast('Este material ya está en la lista', true); return;
   }
-  despItems.push({
+  despItems.unshift({
     movId: null, catId: comboSelected.id, nombre: comboSelected.nombre,
     codigo: comboSelected.codigo, unidad: comboSelected.unidad,
     categoria: comboSelected.categoria, cantidad: 1,
@@ -2122,10 +2663,6 @@ async function openDespachoModal(preloadSitioId) {
   const bodSel = document.getElementById('desp-bodega');
   bodSel.innerHTML = bodegasData.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('');
   if (bodegasData.length === 1) bodSel.value = bodegasData[0].id;
-
-  const matSel = document.getElementById('desp-add-material');
-  matSel.innerHTML = '<option value="">+ Buscar y agregar material...</option>' +
-    catalogoData.map(c => `<option value="${c.id}">[${c.categoria}] ${c.nombre} (${c.codigo})</option>`).join('');
 
   const copySel = document.getElementById('desp-copy-from');
   copySel.innerHTML = '<option value="">— Seleccionar sitio de referencia —</option>' +
@@ -2422,6 +2959,7 @@ async function guardarNuevoDespacho(status) {
 
   const label = status === 'finalizado' ? 'finalizado' : 'guardado como borrador';
   toast(`Despacho ${despDocNum} ${label} — ${validos.length} items ✓`);
+  logCambio('Nuevo Despacho', despDocNum, `${validos.length} items, status: ${status}`);
   closeModal('modal-despacho');
   await reloadAfterDespacho();
 }
@@ -2488,6 +3026,7 @@ async function guardarEdicionDespacho(status) {
   }).eq('numero_doc', despDocNum);
 
   toast(`Despacho ${despDocNum} actualizado ✓`);
+  logCambio('Editar Despacho', despDocNum, `status: ${status}`);
   closeModal('modal-despacho');
   await reloadAfterDespacho();
 }
@@ -2581,6 +3120,7 @@ async function finalizarDespacho(docNum) {
   }).eq('numero_doc', docNum);
   if (error) { toast('Error: ' + error.message, true); return; }
   toast(`Despacho ${docNum} finalizado ✓`);
+  logCambio('Finalizar Despacho', docNum, 'bloqueado permanentemente');
   await loadDespachos();
   renderDespachosList();
 }
@@ -2654,6 +3194,7 @@ function renderSitios() {
         <button class="btn-edit" onclick="verDetalleSitio(${s.id})">Ver materiales</button>
         ${currentRole !== 'viewer' ? `<button class="btn bd btn-sm" style="font-size:9px;padding:3px 8px" onclick="openDespachoModal(${s.id})">+ Despacho</button>` : ''}
         ${currentRole !== 'viewer' ? `<button class="btn-edit" onclick="editSitio(${s.id})">Editar</button>` : ''}
+        ${currentRole === 'admin' ? `<button class="btn-del" onclick="eliminarSitio(${s.id},'${s.nombre.replace(/'/g,"\\'")}')">Eliminar</button>` : ''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--g3)">Sin sitios registrados</td></tr>';
@@ -2716,6 +3257,38 @@ function verDetalleSitio(sitioId) {
   document.getElementById('sitio-detalle-total').innerHTML =
     `Total Liquidado: <span style="color:var(--b);font-size:15px">${formatCOP(totalLiquidado)}</span>`;
 
+  // ─ Despachos del sitio ─
+  const despSitio = despachosData.filter(d => d.sitio_id === sitioId);
+  const despListEl = document.getElementById('sitio-despachos-list');
+  if (despListEl) {
+    if (!despSitio.length) {
+      despListEl.innerHTML = '<div style="font-size:11px;color:var(--g3);padding:8px 0">Sin despachos registrados para este sitio</div>';
+    } else {
+      despListEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:130px 1fr 100px 110px 120px auto;gap:8px;align-items:center;padding:6px 10px;background:var(--k);color:var(--gl);border-radius:6px 6px 0 0;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase">
+        <span>Documento</span><span>Bodega</span><span>Fecha</span><span>Total</span><span>Estado</span><span></span>
+      </div>` +
+      despSitio.map(d => {
+        const movs   = movData.filter(m => m.numero_doc === d.numero_doc && m.tipo === 'Salida');
+        const total  = movs.reduce((a, m) => a + Number(m.valor_total || 0), 0);
+        const isFin  = d.status === 'finalizado';
+        const bodNom = d.bodegas?.nombre || bodegasData.find(b => b.id === d.bodega_id)?.nombre || '—';
+        return `
+        <div style="display:grid;grid-template-columns:130px 1fr 100px 110px 120px auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--g1);font-size:11px">
+          <span><span class="badge-doc" style="font-size:10px">${d.numero_doc}</span></span>
+          <span style="font-size:11px">${bodNom}</span>
+          <span>${fmtDate(d.fecha)}</span>
+          <span style="font-weight:700">${formatCOP(total)}</span>
+          <span><span class="desp-card-status ${isFin ? 'desp-finalizado' : 'desp-borrador'}">${isFin ? '✓ Finalizado' : '✏ Borrador'}</span></span>
+          <span style="display:flex;gap:4px">
+            ${!isFin && currentRole !== 'viewer' ? `<button class="btn-edit" onclick="editarDespacho('${d.numero_doc}')">Editar</button>` : ''}
+            ${!isFin && currentRole !== 'viewer' ? `<button class="btn bp btn-sm" style="font-size:9px;padding:3px 8px;border-radius:4px" onclick="finalizarDespacho('${d.numero_doc}')">Finalizar</button>` : ''}
+          </span>
+        </div>`;
+      }).join('');
+    }
+  }
+
   document.getElementById('card-sitio-detalle').style.display = '';
   document.getElementById('card-sitio-detalle').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -2764,11 +3337,43 @@ async function guardarSitio() {
     ({ error } = await sb.from('sitios').insert({ ...payload, activo: true }));
   }
   if (error) { toast('Error: ' + error.message, true); return; }
+  const accion = editId ? 'Editar Sitio' : 'Nuevo Sitio';
   toast(editId ? 'Sitio actualizado ✓' : 'Sitio creado ✓');
+  logCambio(accion, payload.nombre, editId ? `id: ${editId}` : '');
   closeModal('modal-sitio');
   await loadSitios();
   renderSitios();
   populateSelects();
+}
+
+async function eliminarSitio(id, nombre) {
+  if (currentRole !== 'admin') { toast('Solo el administrador puede eliminar sitios', true); return; }
+  if (!confirm(`¿Eliminar el sitio "${nombre}" y TODOS sus movimientos y despachos?\n\nEsta acción no se puede deshacer.`)) return;
+  if (!sb) return;
+
+  // 1. Borrar movimientos asociados
+  const { error: eM } = await sb.from('mat_movimientos').delete().eq('sitio_id', id);
+  if (eM) { toast('Error eliminando movimientos: ' + eM.message, true); return; }
+
+  // 2. Borrar despachos asociados
+  const { error: eD } = await sb.from('despachos').delete().eq('sitio_id', id);
+  if (eD) { toast('Error eliminando despachos: ' + eD.message, true); return; }
+
+  // 3. Borrar el sitio
+  const { error: eS } = await sb.from('sitios').delete().eq('id', id);
+  if (eS) { toast('Error eliminando sitio: ' + eS.message, true); return; }
+
+  logCambio('Eliminar Sitio', nombre, `id: ${id}`);
+  toast(`Sitio "${nombre}" eliminado ✓`);
+
+  // Recargar todo porque afecta stock view, movimientos, despachos
+  await Promise.all([loadSitios(), loadMovimientos(), loadDespachos(), loadStock()]);
+  buildInventarioView();
+  renderDashboard();
+  renderSitios();
+  renderMovimientos();
+  renderDespachosList();
+  closeSitioDetalle();
 }
 
 // ============================================================
